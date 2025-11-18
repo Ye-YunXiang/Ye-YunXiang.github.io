@@ -1,0 +1,70 @@
+{
+  "friends": [
+    {
+      "id_name": "cf-links",
+      "desc": "Common links included in circle friends",
+      "link_list": [
+        {
+          "name": "Arthals' ink",
+          "intro": "所见高山远木，阔云流风；所幸岁月盈余，了无拘束",
+          "link": "https://arthals.ink/",
+          "avatar": "https://cdn.arthals.ink/Arthals.png"
+        },
+        {
+          "name": "CWorld Site",
+          "intro": "求知若愚，虚怀若谷",
+          "link": "https://cworld0.com/",
+          "avatar": "https://cravatar.cn/avatar/1ffe42aa45a6b1444a786b1f32dfa8aa?s=200"
+        }
+      ]
+    },
+    {
+      "id_name": "inactive-links",
+      "desc": "Inactive or rule-breaking friends",
+      "link_list": []
+    },
+    {
+      "id_name": "special-links",
+      "desc": "Other special links",
+      "link_list": [
+        {
+          "name": "虫洞",
+          "intro": "随机前往十年之约的成员博客",
+          "link": "https://www.foreverblog.cn/go.html",
+          "avatar": "/images/wormhole.png"
+        },
+        {
+          "name": "开往",
+          "intro": "随机前往开往的成员博客",
+          "link": "https://www.travellings.cn/go.html",
+          "avatar": "https://www.travellings.cn/assets/travelling.png"
+        }
+      ]
+    },
+
+    {
+        "id_name": "cf-links",
+        "desc": "Common links included in circle friends",
+        "link_list": [
+        {
+          "name": "知乎",
+          "intro": "思维碰撞 💡",
+          "link": "https://www.zhihu.com/people/xie-yun-xiang-67",
+          "avatar": "/images/ZhiHu.png"
+        },
+        {
+          "name": "BiliBili",
+          "intro": "记录日常生活🎈",
+          "link": "https://space.bilibili.com/13348842?spm_id_from=333.337.0.0",
+          "avatar": "/images/bilibili.png"
+        },
+        {
+          "name": "公众号",
+          "intro": "搜索 “PoetryCloud” 文章同步发布 📢",
+          "link": "",
+          "avatar": "/images/WeiXinGZH.png"
+        }
+      ]
+    }
+  ]
+}
