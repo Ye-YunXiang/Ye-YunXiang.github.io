@@ -1,8 +1,8 @@
 ---
 title: MQTT 协议全面解析
-publishDate: 2025-10-19 8:38:00
+publishDate: 2025-11-23 20:20:00
 description: 'Markdown 是一种轻量级的「标记语言」。'
-tags: [协议, 中文]
+tags: [协议]
 heroImage: { src: './MQTT协议解析banner.png', color: '#3fa1fe' }
 language: '中文'
 ---

@@ -5,6 +5,8 @@ import { TOC } from 'astro-pure/components/pages'
 import PageLayout from '@/layouts/ContentLayout.astro'
 import { Comment, PageInfo } from '@/components/waline'
 
+import { GiscusComment } from '@/components/giscus'
+
 interface Props {
   title: string
   headings?: MarkdownHeading[]
@@ -25,7 +27,15 @@ const { title, headings, view, comment: enableComment, ...props } = Astro.props
   <slot />
 
   <slot name='bottom' slot='bottom'>
-    {enableComment && <Comment class='mt-3 sm:mt-6' />}
+    <!-- 这里是 waline的 -->
+    <!-- {enableComment && <Comment class='mt-3 sm:mt-6' />} -->
+
+    {enableComment && <GiscusComment 
+        repo="Ye-YunXiang/Ye-YunXiang.github.io"
+        repoId="R_kgDOQYM5gQ"
+        category="Announcements"
+        categoryId="DIC_kwDOQYM5gc4CyAkg"
+    />}
   </slot>
 
   <slot name='bottom-sidebar' slot='bottom-sidebar' />

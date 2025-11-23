@@ -54,7 +54,7 @@ export const theme: ThemeUserConfig = {
       //  { title: 'Tags', link: '/tags' },
       // { title: 'Notes', link: '/notes' },
       { title: 'Archives', link: '/archives' },
-      { title: 'Links', link: '/links' },
+      // { title: 'Links', link: '/links' },
       { title: 'About', link: '/about' }
     ]
   },
@@ -114,7 +114,8 @@ export const integ: IntegrationUserConfig = {
     // Friend logbook
     logbook: [
       { date: '2025-10-13', content: '使用 Astro Theme Pure 主题搭建个人博客网站。' },
-      { date: '2025-10-18', content: '修改其中样式以及配置。' }
+      { date: '2025-10-18', content: '修改其中样式以及配置。' },
+      { date: '2025-11-23', content: '添加评论插件，开始更新博客并部署。' }
     ],
     // Yourself link info
     applyTip: [
