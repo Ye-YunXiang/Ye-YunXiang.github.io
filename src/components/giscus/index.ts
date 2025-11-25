@@ -1,0 +1,1 @@
+export { default as GiscusComment } from './Comments.astro'
