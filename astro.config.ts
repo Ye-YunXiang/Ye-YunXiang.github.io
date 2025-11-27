@@ -8,9 +8,6 @@ import { defineConfig } from 'astro/config'
 import rehypeKatex from 'rehype-katex'
 import remarkMath from 'remark-math'
 
-// Others
-// import { visualizer } from 'rollup-plugin-visualizer'
-
 // Local integrations
 // Local rehype & remark plugins
 import rehypeAutolinkHeadings from './src/plugins/rehype-auto-link-headings.ts'
@@ -28,7 +25,7 @@ import config from './src/site.config.ts'
 // https://astro.build/config
 export default defineConfig({
   // Top-Level Options
-  site: 'https://Ye-YunXiang.github.io',
+  site: 'https://poetrycld.com/',
   // Deploy to a sub path; See https://astro-pure.js.org/docs/setup/deployment#platform-with-base-path
   // base: '/astro-pure/',
   trailingSlash: 'never',
@@ -60,10 +57,8 @@ export default defineConfig({
     // sitemap(),
     // mdx(),
     AstroPureIntegration(config)
-    // (await import('@playform/compress')).default({
-    //   SVG: false,
-    //   Exclude: ['index.*.js']
-    // }),
+    // @playform/compress have potential build issue with this template
+    // (await import('@playform/compress')).default({ SVG: false, Exclude: ['index.*.js'] })
 
     // Temporary fix vercel adapter
     // static build method is not needed
@@ -109,13 +104,5 @@ export default defineConfig({
   },
   experimental: {
     contentIntellisense: true
-  },
-  vite: {
-    plugins: [
-      //   visualizer({
-      //     emitFile: true,
-      //     filename: 'stats.html'
-      //   })
-    ]
   }
 })

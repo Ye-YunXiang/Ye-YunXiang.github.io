@@ -240,32 +240,3 @@ body::-webkit-scrollbar {
 
 
 
-
-/* 下方修改都是 添加了自适应文章 MakeDowm 的注释颜色 */
-/* Markdown blockquote 专用样式（仅作用于文章内容区域），不修改 description 显示 */
-article .markdown blockquote,
-.content .markdown blockquote,
-.prose blockquote {
-    /* background: var(--blockquote-bg, #f6f8fb); */
-  /* border-left: 4px solid var(--color-accent, #D58388); */
-  border-left: 4px solid var(--hero-color, var(--color-accent, #1b1b1b));
-  /* padding: 0.75rem 1rem; */
-  /* margin: 1.25rem 0; */
-  border-radius: 6px;
-  color: var(--blockquote-text, #374151);
-  font-style: normal;
-  line-height: 1.5;
-}
-
-/* 内部段落去掉默认外边距，避免双倍间距 */
-article .markdown blockquote p {
-  margin: 0;
-}
-
-/* 明确保留 description 相关类的既有样式，防止被误覆盖 */
-.description,
-.post-description,
-.entry-description {
-  /* ...existing code... */
-}
-

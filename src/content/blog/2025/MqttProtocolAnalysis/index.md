@@ -1,8 +1,8 @@
 ---
-title: MQTT 协议全面解析
-publishDate: 2025-11-23 20:20:00
-description: 'Markdown 是一种轻量级的「标记语言」。'
-tags: [协议]
+title: MQTT协议全面解析
+publishDate: 2025-11-27 23:30:00
+description: '撕开MQTT协议底裤，分析协议的每 bit 的意义。'
+tags: [协议, MQTT]
 heroImage: { src: './MQTT协议解析banner.png', color: '#3fa1fe' }
 language: '中文'
 ---
@@ -115,12 +115,12 @@ CSDN：[https://blog.csdn.net/qq_39785798/article/details/80765716](https://blog
 
 - `订阅者` DISCONNECT		断开连接
 
-# 报文案例
+## 报文案例
 
 > 这里按照数据报文的规定，给了每个报文的例子。
 > 当然实际使用要转化为 ASCII 的十六进制码。
 
-#### CONNECT-连接服务端
+### CONNECT-连接服务端
 
 > 10 + 剩余的长度 + 00 04(协议名长度) + 4d 51 54 54(MQTT) + 04(协议版本) + 连接标志 + 00 3c(心跳间隔) + 客户端 ID 长度 2 字节 + 客户端 ID + 用户名长度 2 字节 + 用户名 + 密码长度 2 字节 + 密码
 
@@ -136,17 +136,17 @@ CSDN：[https://blog.csdn.net/qq_39785798/article/details/80765716](https://blog
 ![image.png](./assets/net-img-1691650760371-5e8df062-c4e0-46f6-8d2a-e1616e253be2-20231029145727-bwdif9c.png)
 ![image.png](./assets/net-img-1691655817329-4de30835-4609-4445-8ef0-71478e591d04-20231029145727-1paksoy.png)
 
-#### PINGREQ-心跳请求
+### PINGREQ-心跳请求
 
 > 固定报文:    C0 00
 
 这个要在 CONNECT 规定的保持连接 Keep Alive 的秒数之内发送心跳就行。
 
-#### DISCONNECT-断开连接
+### DISCONNECT-断开连接
 
 > 固定报文：E0 00
 
-#### SUBSCRIBE_订阅主题
+### SUBSCRIBE_订阅主题
 
 > 82(固定报头) + 剩余长度 + 可变报头 2 字节(相当于用户 ID，自定义) + Topic 长度两字节 + Topic + 服务等级(0->00，1->01)
 
@@ -155,7 +155,7 @@ CSDN：[https://blog.csdn.net/qq_39785798/article/details/80765716](https://blog
 > 可变报头建议顺序增加从 0001 到 ffff。
 > 这个是关键，相当于订阅设备自己的 ID，不要重复。
 
-#### UNSUBSCRIBE_取消订阅
+### UNSUBSCRIBE_取消订阅
 
 > A2(固定报头) + 剩余长度 + 可变报头 2 字节(相当于用户 ID，自定义) + Topic 长度两字节 + Topic
 
@@ -164,7 +164,7 @@ CSDN：[https://blog.csdn.net/qq_39785798/article/details/80765716](https://blog
 - 固定报头改了报文类型
 - 结尾没有服务等级。
 
-#### PUBLISH_数据上报
+### PUBLISH_数据上报
 
 > 30(MQTT 报文类型 +DUP+QoS-H+QoS-+RETAIN) + 剩余长度 + 发布的 Topic 名字长度两字节 + 发布 Topic + 载荷数据
 > 上面的 30 中 QoS 等级为 0，等级为 1 是 32
@@ -186,7 +186,7 @@ CSDN：[https://blog.csdn.net/qq_39785798/article/details/80765716](https://blog
 
 如果要有响应，就把固定报头加上 QoS 等级 1，为 32，格式中还要在 Topic 后面加上报文标识符两个字节。
 
-# 阿里云
+## 阿里云
 
 > CSDN 的连接教程：[https://blog.csdn.net/fang_dz999/article/details/112283742](https://blog.csdn.net/fang_dz999/article/details/112283742)
 > 阿里云的帮助手册：[https://help.aliyun.com/zh/iot/user-guide/device-properties-events-and-services?spm=a2c4g.11186623.0.0.598577e11gleH5](https://help.aliyun.com/zh/iot/user-guide/device-properties-events-and-services?spm=a2c4g.11186623.0.0.598577e11gleH5)
@@ -195,7 +195,7 @@ CSDN：[https://blog.csdn.net/qq_39785798/article/details/80765716](https://blog
 
 a1yyeqgpsKm.iot-as-mqtt.cn-shanghai.aliyuncs.com :1883   主机地址
 
-#### 参数（以阿里手册为主）
+### 参数（以阿里手册为主）
 
 首先设备三元组是这个：
 
@@ -221,7 +221,7 @@ a1yyeqgpsKm.iot-as-mqtt.cn-shanghai.aliyuncs.com :1883   主机地址
 
       1. *表示自己账号的 ProductKey，注意替换。
 
-#### 自己编写一波
+### 自己编写一波
 
 ```markdown
 - 服务器：a1yyeqgpsKm.iot-as-mqtt.cn-shanghai.aliyuncs.com
@@ -280,7 +280,7 @@ B0 02 00 0A
 > 40 固定报头，02 为接下来剩余长度固定为2，7b 22 发布消息的报文标识符（标识符必须是2个字节）
 ```
 
-#### 上传格式
+### 上传格式
 
 上传格式：
 

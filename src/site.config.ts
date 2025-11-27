@@ -7,7 +7,7 @@ export const theme: ThemeUserConfig = {
   /** Will be used in index page & copyright declaration */
   author: 'PoetryCloud',
   /** Description metadata for your website. Can be used in page metadata. */
-  description: 'Stay hungry, stay foolish',
+  description: '愚者先行.',
   /** The default favicon for your site which should be a path to an image in the `public/` directory. */
   favicon: '/favicon/favicon.ico',
   /** Specify the default language for this site. */
@@ -44,32 +44,28 @@ export const theme: ThemeUserConfig = {
   ],
   customCss: [],
 
-  // 菜单声明
   /** Configure the header of your site. */
   header: {
     menu: [
       { title: 'Blog', link: '/blog' },
+      // { title: 'Docs', link: '/docs' },
       // { title: 'Projects', link: '/projects' },
-      //  { title: 'Docs', link: '/docs' },
-      //  { title: 'Tags', link: '/tags' },
-      // { title: 'Notes', link: '/notes' },
-      { title: 'Archives', link: '/archives' },
       // { title: 'Links', link: '/links' },
+      { title: 'Archives', link: '/archives' },
       { title: 'About', link: '/about' }
     ]
   },
 
-
   /** Configure the footer of your site. */
   footer: {
     // Year format
-    year: `© ${new Date().getFullYear()}`,
+    year: `© 2025 - ${new Date().getFullYear()}`,
     // year: `© 2019 - ${new Date().getFullYear()}`,
     links: [
       // Registration link
       {
         title: 'Copyright',
-        link: 'https://creativecommons.org/licenses/by-nc-sa/4.0/deed.zh-hans',
+        link: 'https://creativecommons.org/licenses/by/4.0/deed.zh-hans',
         style: 'text-sm' // Uno/TW CSS class
       },
       {
@@ -115,32 +111,39 @@ export const integ: IntegrationUserConfig = {
     logbook: [
       { date: '2025-10-13', content: '使用 Astro Theme Pure 主题搭建个人博客网站。' },
       { date: '2025-10-18', content: '修改其中样式以及配置。' },
-      { date: '2025-11-23', content: '添加评论插件，开始更新博客并部署。' }
+      { date: '2025-11-27', content: '基于github上线。' }
     ],
     // Yourself link info
     applyTip: [
       { name: 'Name', val: theme.title },
       { name: 'Desc', val: theme.description || 'Null' },
-      { name: 'Link', val: 'https://www.poetrycloud.top/' },
-      { name: 'Avatar', val: 'https://www.poetrycloud.top/favicon/apple-touch-icon.png' }
-    ]
+      { name: 'Link', val: 'https://www.poetrycld.com/' },
+      { name: 'Avatar', val: 'https://www.poetrycld.com/favicon/apple-touch-icon.png' }
+    ],
+    // Cache avatars in `public/avatars/` to improve user experience.
+    cacheAvatar: false
   },
   // Enable page search function
   pagefind: true,
   // Add a random quote to the footer (default on homepage footer)
   // See: https://astro-pure.js.org/docs/integrations/advanced#web-content-render
   quote: {
+    // Hitokoto
     // https://developer.hitokoto.cn/sentence/#%E8%AF%B7%E6%B1%82%E5%9C%B0%E5%9D%80
     // server: 'https://v1.hitokoto.cn/?c=i',
-    // target: (data) => (data as { hitokoto: string }).hitokoto || 'Error'
+    // target: `(data) => (data.hitokoto || 'Error')`
+    // Quoteable API (down temporarily)
     // https://github.com/lukePeavey/quotable
-    server: 'https://api.quotable.io/quotes/random?maxLength=60',
-    target: `(data) => data[0].content || 'Error'`
+    // server: 'https://api.quotable.io/quotes/random?maxLength=60',
+    // target: `(data) => data[0].content || 'Error'`
+    // DummyJSON
+    server: 'https://dummyjson.com/quotes/random',
+    target: `(data) => (data.quote.length > 80 ? \`\${data.quote.slice(0, 80)}...\` : data.quote || 'Error')`
   },
   // UnoCSS typography
   // See: https://unocss.dev/presets/typography
   typography: {
-    class: 'prose text-base text-muted-foreground',
+    class: 'prose text-base',
     // The style of blockquote font, normal or italic (default to italic in typography)
     blockquoteStyle: 'italic',
     // The style of inline code block, code or modern (default to code in typography)
@@ -159,7 +162,8 @@ export const integ: IntegrationUserConfig = {
   waline: {
     enable: false,
     // Server service link
-    server: 'https://astro-theme-pure-waline.arthals.ink/',
+    //server: 'https://astro-theme-pure-waline.arthals.ink/',
+    
     // Refer https://waline.js.org/en/guide/features/emoji.html
     emoji: ['bmoji', 'weibo'],
     // Refer https://waline.js.org/en/reference/client/props.html

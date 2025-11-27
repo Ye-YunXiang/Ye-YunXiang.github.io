@@ -14,28 +14,19 @@ const headings = [
 
 const { friends } = links
 const linksConf = config.integ.links
-const linkEditPage = 'mailto:poetrycloud@foxmail.com'
+const linkEditPage = 'https://github.com/cworld1/astro-theme-pure/blob/main/public/links.json'
 ---
 
 <PageLayout title='Links' {headings} comment>
-  <p>友情链接展示 ~ Display friendship links</p>
   <p>怎么可能有顺序呢，当然是随机的~ It's random</p>
   <h2 id='common-links'>Common Links</h2>
-  <p>友链展示招募, 请根据下方本站信息格式发送邮件至<a href={linkEditPage} target='_blank'>poetrycloud@foxmail.com</a>，申请时请关注页面下方的说明。</p>
-
-  <!-- 根据 public\links.json 文件中设置 链接-->
-  <!-- <FriendList list={friends[0]} /> -->
-
-  <!-- 历史添加链接 -->
-  <!-- <Collapse title='Links with Bad Status'>
+  <FriendList list={friends[0]} />
+  <Collapse title='Links with Bad Status'>
     <FriendList list={friends[1]} />
-  </Collapse> -->
-
-  <!-- 时间进度条 -->
-  <!-- <Collapse title='Link History Book'>
+  </Collapse>
+  <Collapse title='Link History Book'>
     <Timeline events={linksConf.logbook} />
-  </Collapse> -->
-
+  </Collapse>
   <h2 id='special-links'>Special Links</h2>
   <FriendList list={friends[2]} />
 
@@ -59,9 +50,9 @@ const linkEditPage = 'mailto:poetrycloud@foxmail.com'
   </blockquote>
 
   <p>
-    可通过下方留言或 <a href={linkEditPage} target='_blank'>邮件: poetrycloud@foxmail.com</a> 申请友链。此外申请说明：<br
+    可通过下方留言或 <a href={linkEditPage} target='_blank'>提交 PR</a> 申请友链。此外申请说明：<br
     />
-    Apply your link by leaving comment or <a href={linkEditPage} target='_blank'>mail: poetrycloud@foxmail.com</a
+    Apply your link by leaving comment or <a href={linkEditPage} target='_blank'>Submitting a PR</a
     >. Additional info:
   </p>
   <ul>
