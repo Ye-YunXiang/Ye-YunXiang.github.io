@@ -4,7 +4,7 @@ title: TLS协议流程解析
 publishDate: 2025-12-06 22:41:00  
 description: '细讲TLS协议建立通讯的每一步都做了啥。'  
 tags: [协议, TLS]  
-heroImage: { src: './博客TLS 配首页图.png', color: '#388cfaff' }  
+heroImage: { src: './TlsProcess Analysis.md_banner.jpg', color: '#388cfaff' }  
 language: '中文'
 
 ---
