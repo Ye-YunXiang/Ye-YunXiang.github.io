@@ -1,15 +1,12 @@
 ---
-
+#博客文件名： 2512-McuSimpleFilter
 title: 单片机中5种常见简单滤波器  
 publishDate: 2025-12-25 22:37:00  
 description: '单片机简单滤波器思路解析，附带使用代码。'  
 tags: [算法, 滤波]  
-heroImage: { src: './McuSimpleFilter_banner.jpg', color: '#0c2638ff' }  
+heroImage: { src: './2512-McuSimpleFilter-banner.jpg', color: '#0c2638ff' }  
 language: '中文'
-
 ---
-
-## 前言
 
 MCU开发过程中采集各类数据，无论是简单的温度、电压、电流，甚至是摄像头传出来的图像数据，多少都会受到电路噪声、环境噪声的影响，导致被噪声影响的数据触发了功能操作。
 
@@ -35,7 +32,7 @@ MCU开发过程中采集各类数据，无论是简单的温度、电压、电�
 
 算法中不一定要使用滑动窗口，在函数内使用静态变量计数并累加输入值，到指定计数值后计算均值，清除计数和累计的数据值重新计数，这在实际应用中更为常见。
 
-```C
+```c title="moving_avg.c"
 // 这里简单静态滑动窗口案例
 #include <stdbool.h>
 
@@ -46,10 +43,10 @@ typedef struct {
     float sum;     						// 缓冲区数据的总和
 	int index;     						// 当前缓冲区位置
 	bool buf_full;						// 缓冲区满了
-} moving_avg_s;
+} moving_avg_st;
 
 // 初始化滑动平均滤波器
-void moving_avg_init(moving_avg_s *filter) 
+void moving_avg_init(moving_avg_st *filter) 
 {
     filter->index = 0;
     filter->sum = 0.0f;
@@ -61,7 +58,7 @@ void moving_avg_init(moving_avg_s *filter)
 }
 
 // 更新滤波器并计算当前平均值
-float moving_avg_updata(moving_avg_s *filter, float input) 
+float moving_avg_updata(moving_avg_st *filter, float input) 
 {
 	int current_buf_size = MOVING_AVG_BUF_SIZE;
 
@@ -101,7 +98,7 @@ float moving_avg_updata(moving_avg_s *filter, float input)
 
 ![image](./assets/image-20251215223908-gwpepgv.png)
 
-```C
+```c  title="moving_median.c"
 // 这里简单静态滑动窗口案例
 // 中位值滤波窗口至少要大于 3, 并且为奇数最佳
 #include <stdbool.h>
@@ -109,13 +106,13 @@ float moving_avg_updata(moving_avg_s *filter, float input)
 #define MOVING_MEDIAN_BUF_SIZE 	(5) // 定义滑动窗口大小
 
 typedef struct {
-    int buf[MOVING_MEDIAN_AVG_BUF_SIZE];    // 环形缓冲区存储历史数据
+    int buf[MOVING_MEDIAN_BUF_SIZE];    // 环形缓冲区存储历史数据
 	int index;     						// 当前缓冲区位置
 	bool buf_full;						// 缓冲区满了
-} moving_median_avg_s;
+} moving_median_st;
 
 // 初始化滑动平均滤波器
-void moving_median_init(moving_median_avg_s *filter) 
+void moving_median_init(moving_median_st *filter) 
 {
     filter->index = 0;
 	filter->buf_full = false;
@@ -123,29 +120,29 @@ void moving_median_init(moving_median_avg_s *filter)
 }
 
 // 更新滤波器并计算当前平均值
-int moving_median_updata(moving_median_avg_s *filter, int input) 
+int moving_median_updata(moving_median_st *filter, int input) 
 {
 	int result = 0;
 
 	// 添加新数据到缓冲区
-    filter->index = filter->index % MOVING_MEDIAN_AVG_BUF_SIZE;
+    filter->index = filter->index % MOVING_MEDIAN_BUF_SIZE;
     filter->buf[filter->index] = input;
     filter->index++;
     
 
-	if (!filter->buf_full && filter->index >= MOVING_MEDIAN_AVG_BUF_SIZE)
+	if (!filter->buf_full && filter->index >= MOVING_MEDIAN_BUF_SIZE)
 	{
 		filter->buf_full = true;
 	}
 
     if (filter->buf_full) 
 	{
-        int arr[MOVING_MEDIAN_AVG_BUF_SIZE];
+        int arr[MOVING_MEDIAN_BUF_SIZE];
 		memcpy(arr, filter->buf, sizeof(filter->buf));
 		// 排序
-		bubble_sort(arr, MOVING_MEDIAN_AVG_BUF_SIZE);
+		bubble_sort(arr, MOVING_MEDIAN_BUF_SIZE);
 		// 取中间值
-		result = arr[ MOVING_MEDIAN_AVG_BUF_SIZE/2];
+		result = arr[ MOVING_MEDIAN_BUF_SIZE/2];
     }
 	else
 	{
@@ -168,7 +165,7 @@ int moving_median_updata(moving_median_avg_s *filter, int input)
 
 代码上就是在中值滤波上增加了去除最大值和最小值，均值中间几点数据出结果；但如果小一维窗口可以更简单些，不用排序。
 
-```C
+```c title="moving_median_avg.c"
 // 这里简单静态滑动窗口案例
 // 中位值平均滤波，这里案例是常用窗口5点，去除最大最小点，无需排序。
 #include <stdbool.h>
@@ -179,10 +176,10 @@ typedef struct {
     int buf[MOVING_MEDIAN_AVG_BUF_SIZE];    // 环形缓冲区存储历史数据
 	int index;     						// 当前缓冲区位置
 	bool buf_full;						// 缓冲区满了
-} moving_median_avg_s;
+} moving_median_avg_st;
 
 // 初始化滑动平均滤波器
-void moving_median_init(moving_median_avg_s *filter) 
+void moving_median_init(moving_median_avg_st *filter) 
 {
     filter->index = 0;
 	filter->buf_full = false;
@@ -190,7 +187,7 @@ void moving_median_init(moving_median_avg_s *filter)
 }
 
 // 更新滤波器并计算当前平均值
-int moving_median_updata(moving_median_avg_s *filter, int input) 
+int moving_median_updata(moving_median_avg_st *filter, int input) 
 {
 	int result = 0;
 
@@ -259,10 +256,11 @@ t表示当前时间；v为经过滤波器的数据；θ为当前输入值；β�
 它对数据平滑的效果无敌，但是过度平滑会导致数据失真，所以需要调整参数 β 来达到想要的效果。
 
 ![image](./assets/image-20251216103945-0gfffg5.jpg "图片来源：https://blog.csdn.net/qq_42363032")
+<small><i>图片来源：https://blog.csdn.net/qq_42363032</i></small>
 
 留下作业：下方代码这样就够了嘛，如果使用在温度检测上，真实数据突然变得很大会有什么问题？有什么办法可以缓解因为温度骤升或骤降而失真延迟太大的问题。。。
 
-```C
+```c title="ema_smoother.c"
 // 指数加权移动平均
 
 #define EWMA_SMOOTH_ALPHA_EDGE 1.0f      // 边缘当前质心权重占比
@@ -270,14 +268,13 @@ t表示当前时间；v为经过滤波器的数据；θ为当前输入值；β�
 #define EWMA_TRANSITION_STEPS_COUNT  3   //收敛速度
 
 // 指数均值移动滤波对象
-struct ewma_smoother_t
-{
+typedef struct{
     float prev_smoothed_value;      // 存储上个值
     float alpha;                    // 权重
-};
+}ewma_smoother_st;
 
 // 指数加权移动平均-------------------------------------------------------------
-void ema_smoother_init(struct ewma_smoother_t *ewma)
+void ema_smoother_init(ewma_smoother_st *ewma)
 {
     ewma->prev_smoothed_value = 0.0f;
     ewma->alpha = EWMA_SMOOTH_ALPHA_SMOOTH;
@@ -286,7 +283,7 @@ void ema_smoother_init(struct ewma_smoother_t *ewma)
 /**
  * 指数加权移动更新
 */
-float ema_smoother_update(struct ewma_smoother_t *ewma, float current_value) 
+float ema_smoother_update(ewma_smoother_st *ewma, float current_value) 
 {
     // 动态调整平滑系数
     if (ewma->alpha > EWMA_SMOOTH_ALPHA_SMOOTH)
@@ -315,23 +312,24 @@ float ema_smoother_update(struct ewma_smoother_t *ewma, float current_value)
 卡曼计算滤波计算流程如下图：
 
 ![image](./assets/image-20251216145043-d8v9qn5.jpg "图片来源：https://zhuanlan.zhihu.com/p/492776982")
+<small><i>图片来源：https://zhuanlan.zhihu.com/p/492776982</i></small>
 
 由于一维卡尔曼的F(状态转移矩阵)和H(观测矩阵)退化为标量1，因此只能滤波静态噪声，无法用于动态跟踪。
 
-```C
+```c title="kalman_1d.c"
 //一维简单静态卡尔曼 
 
-struct kalman_1d
+typedef struct 
 {
     float x;  // 状态估计——滤波结果
     float p;  // 估计协方差
 
     float q;  // 过程噪声——模型不确定性
     float r;  // 测量噪声——传感器噪声
-};
+}kalman_1d_st;
 
 // 卡尔曼滤波器
-void kalman1d_init(struct kalman_1d * kf, float init_x, float init_p, float init_q, float init_r)
+void kalman1d_init(kalman_1d_st * kf, float init_x, float init_p, float init_q, float init_r)
 {
     kf->x = init_x; 
     kf->p = init_p; 
@@ -343,7 +341,7 @@ void kalman1d_init(struct kalman_1d * kf, float init_x, float init_p, float init
 /**
  * 卡尔曼滤波器更新
 */
-float kalman1d_update(struct kalman_1d * kf, float x)
+float kalman1d_update(kalman_1d_st * kf, float x)
 {
     // 预测
     kf->p = kf->p + kf->q;

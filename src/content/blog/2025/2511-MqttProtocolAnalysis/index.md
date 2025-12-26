@@ -1,13 +1,12 @@
 ---
+#博客文件名：2511-MqttProtocolAnalysis
 title: MQTT协议全面解析
 publishDate: 2025-11-27 23:30:00
 description: '撕开MQTT协议底裤，分析协议的每 bit 的意义。'
 tags: [协议, MQTT]
-heroImage: { src: './MqttProtocolAnalysis_banner.jpg', color: '#3fa1fe' }
+heroImage: { src: './2512-MqttProtocolAnalysis-banner.jpg', color: '#3fa1fe' }
 language: '中文'
 ---
-
-import { Aside } from 'astro-pure/user'
 
 深度挖掘一下 MQTT。
 中文文档：[https://mcxiaoke.gitbooks.io/mqtt-cn/content/](https://mcxiaoke.gitbooks.io/mqtt-cn/content/)

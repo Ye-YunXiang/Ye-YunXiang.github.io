@@ -1,5 +1,5 @@
 {
-  "name": "blog",
+  "name": "my",
   "type": "module",
   "version": "4.0.9",
   "scripts": {
@@ -38,5 +38,17 @@
     "eslint-plugin-astro": "^1.5.0",
     "prettier": "^3.6.2",
     "prettier-plugin-astro": "^0.14.1"
-  }
+  },
+  "description": "",
+  "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Ye-YunXiang/Ye-YunXiang.github.io.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ye-YunXiang/Ye-YunXiang.github.io/issues"
+  },
+  "homepage": "https://github.com/Ye-YunXiang/Ye-YunXiang.github.io#readme"
 }

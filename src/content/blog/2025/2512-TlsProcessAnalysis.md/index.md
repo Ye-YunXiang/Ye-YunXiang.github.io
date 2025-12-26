@@ -1,19 +1,18 @@
 ---
 
+#博客文件名： 2512-TlsProcessAnalysis.md
 title: TLS协议流程解析  
 publishDate: 2025-12-06 22:41:00  
 description: '细讲TLS协议建立通讯的每一步都做了啥。'  
 tags: [协议, TLS]  
-heroImage: { src: './TlsProcess Analysis.md_banner.jpg', color: '#388cfaff' }  
+heroImage: { src: './2512-TlsProcessAnalysis-banner.jpg', color: '#388cfaff' }  
 language: '中文'
 
 ---
 
-## 前言
-
 TLS全名为传输层安全协议（Transport Layer Security），它是SSL标准化升级版本，现在提到的SSL/TLS一般默认为TLS协议，协议过程中使用的证书是与SSL同类的数字证书（X.509数字证书）。
 
-### SSL和TLS差别
+## SSL和TLS差别
 
 SSL由于握手过程相对简单，同时SSL的证书通常使用自签名证书或者已知的密钥，证书的管理也比较松散，加密算法依赖旧的加密算法。
 
