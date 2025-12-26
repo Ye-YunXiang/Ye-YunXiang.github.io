@@ -1,0 +1,750 @@
+<?xml version="1.0" encoding="UTF-8"?><?xml-stylesheet href="/scripts/pretty-feed-v3.xsl" type="text/xsl"?><rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:h="http://www.w3.org/TR/html4/"><channel><title>PoetryCloud</title><description>愚者先行.</description><link>https://poetrycld.com</link><item><title>单片机中5种常见简单滤波器</title><link>https://poetrycld.com/blog/2025/2512-mcusimplefilter</link><guid isPermaLink="true">https://poetrycld.com/blog/2025/2512-mcusimplefilter</guid><description>单片机简单滤波器思路解析，附带使用代码。</description><pubDate>Thu, 25 Dec 2025 22:37:00 GMT</pubDate><content:encoded>&lt;p&gt;MCU开发过程中采集各类数据，无论是简单的温度、电压、电流，甚至是摄像头传出来的图像数据，多少都会受到电路噪声、环境噪声的影响，导致被噪声影响的数据触发了功能操作。&lt;/p&gt;
+&lt;p&gt;所以工程师们对于采集到的数据要有一定的敏感度，不能拿来就用。这时常见的滤波器就能对收集到的数据进行处理，过滤平滑收集的数据，防止被噪声影响。&lt;/p&gt;
+&lt;p&gt;前三者滤波器主打大力出奇迹，在连续的多点数据中得到想要的数据，使用均值或中位值的方式，抑制数据的波动，以达到平滑的效果；缺点也很明显，使用连续多点处理得出数据，会导致数据滞后，窗口越大，滞后性越强。&lt;/p&gt;
+&lt;p&gt;后两者则是数据迭代的思想，每次结果的都是依靠上次滤波器的结果和本次输入值，经过权重分配输出结果。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;本文提供代码仅供思路参考，实际使用请根据项目适配！具体效果差异请自己尝试方可知道对数据的影响，这里只讲思路。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2&gt;一、滑动平均滤波器&lt;/h2&gt;
+&lt;p&gt;思路：取固定长度的窗口，对连续的数据相加，取均值。&lt;/p&gt;
+&lt;p&gt;缺点：不适合脉冲干扰比较严重的场合，灵敏度低，滞后性较强。&lt;/p&gt;
+&lt;p&gt;这是简单，计算速度最快的滤波器，在数据上下波动不是很大，并且不担心延迟的场景可使用。&lt;/p&gt;
+&lt;p&gt;滑动的过程可以是连续的，也可以是片段的，这里根据实际使用场景自己决定。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20251215223852-y0r1ysh.png&quot; alt=&quot;image&quot;&gt;&lt;/p&gt;
+&lt;p&gt;算法中不一定要使用滑动窗口，在函数内使用静态变量计数并累加输入值，到指定计数值后计算均值，清除计数和累计的数据值重新计数，这在实际应用中更为常见。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-c&quot;&gt;// 这里简单静态滑动窗口案例
+#include &amp;#x3C;stdbool.h&gt;
+
+#define MOVING_AVG_BUF_SIZE 	(5) // 定义滑动窗口大小
+
+typedef struct {
+    float buf[MOVING_AVG_BUF_SIZE];    // 环形缓冲区存储历史数据
+    float sum;     						// 缓冲区数据的总和
+	int index;     						// 当前缓冲区位置
+	bool buf_full;						// 缓冲区满了
+} moving_avg_st;
+
+// 初始化滑动平均滤波器
+void moving_avg_init(moving_avg_st *filter) 
+{
+    filter-&gt;index = 0;
+    filter-&gt;sum = 0.0f;
+	filter-&gt;buf_full = false;
+    for (int i = 0; i &amp;#x3C; MOVING_AVG_BUF_SIZE; i++) 
+	{
+        filter-&gt;buf[i] = 0.0f;
+    }
+}
+
+// 更新滤波器并计算当前平均值
+float moving_avg_updata(moving_avg_st *filter, float input) 
+{
+	int current_buf_size = MOVING_AVG_BUF_SIZE;
+
+	if (!filter-&gt;buf_full)
+	{
+		current_buf_size = filter-&gt;index + 1;
+	}
+
+    // 减去即将被替换的旧数据（如果缓冲区已满）
+    if (filter-&gt;buf_full) 
+	{
+        filter-&gt;sum -= filter-&gt;buffer[filter-&gt;index];
+    }
+	else if (current_buf_size &gt;= MOVING_AVG_BUF_SIZE)
+	{
+		filter-&gt;buf_full = true;
+	}
+
+    // 添加新数据到缓冲区
+    filter-&gt;buf[index] = input;
+    filter-&gt;sum += input;
+    filter-&gt;index = (filter-&gt;index + 1) % MOVING_AVG_BUF_SIZE;
+
+    return filter-&gt;sum / current_buf_size ;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;二、中位值滤波器&lt;/h2&gt;
+&lt;p&gt;思路：取固定长度的窗口，对窗口内数据进行排序，取中位数。&lt;/p&gt;
+&lt;p&gt;缺点：每次都需要计算排序，影响性能；对快速的信号变化反应比较慢。&lt;/p&gt;
+&lt;p&gt;中位值滤波器去噪效果好，每次都是取连续数据的中值，这能有效的过滤异常数据，并保持信号的原始特征；在只需要过滤数据异常值的场景上很适用，比如偶尔出现的一两个最大或最小的极值，这里能有效滤除。&lt;/p&gt;
+&lt;p&gt;中值滤波不一定要使用滑动窗口，缓冲区累计数据到指定大小取中值，然后在清空缓冲区重新累计也是常见做法。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20251215223908-gwpepgv.png&quot; alt=&quot;image&quot;&gt;&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-c&quot;&gt;// 这里简单静态滑动窗口案例
+// 中位值滤波窗口至少要大于 3, 并且为奇数最佳
+#include &amp;#x3C;stdbool.h&gt;
+
+#define MOVING_MEDIAN_BUF_SIZE 	(5) // 定义滑动窗口大小
+
+typedef struct {
+    int buf[MOVING_MEDIAN_BUF_SIZE];    // 环形缓冲区存储历史数据
+	int index;     						// 当前缓冲区位置
+	bool buf_full;						// 缓冲区满了
+} moving_median_st;
+
+// 初始化滑动平均滤波器
+void moving_median_init(moving_median_st *filter) 
+{
+    filter-&gt;index = 0;
+	filter-&gt;buf_full = false;
+	memset(filter-&gt;buf, 0, sizeof(filter-&gt;buf));
+}
+
+// 更新滤波器并计算当前平均值
+int moving_median_updata(moving_median_st *filter, int input) 
+{
+	int result = 0;
+
+	// 添加新数据到缓冲区
+    filter-&gt;index = filter-&gt;index % MOVING_MEDIAN_BUF_SIZE;
+    filter-&gt;buf[filter-&gt;index] = input;
+    filter-&gt;index++;
+    
+
+	if (!filter-&gt;buf_full &amp;#x26;&amp;#x26; filter-&gt;index &gt;= MOVING_MEDIAN_BUF_SIZE)
+	{
+		filter-&gt;buf_full = true;
+	}
+
+    if (filter-&gt;buf_full) 
+	{
+        int arr[MOVING_MEDIAN_BUF_SIZE];
+		memcpy(arr, filter-&gt;buf, sizeof(filter-&gt;buf));
+		// 排序
+		bubble_sort(arr, MOVING_MEDIAN_BUF_SIZE);
+		// 取中间值
+		result = arr[ MOVING_MEDIAN_BUF_SIZE/2];
+    }
+	else
+	{
+		result = input;
+	}
+
+    return result;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;三、中位值平均滤波&lt;/h2&gt;
+&lt;p&gt;思路：固定窗口取连续的几点，去掉最高的几个数据，去掉最低的几个数据，剩余数据取均值。&lt;/p&gt;
+&lt;p&gt;缺点：每次都需要计算排序比较消耗性能，在快速变化大的情况下会产生“阶梯效应”，因为均值时数据会受到旧小数据的影响，就出现阶梯的形状。&lt;/p&gt;
+&lt;p&gt;中位值平均滤波结合了中值滤波的过滤异常值，并且也结合了均值滤波的稳定数据，小窗口下还能多保留些细节，但数据变化较大时，变化曲线容易呈现阶梯状；数据带有个别噪点，同时又在小幅度抖动，可使用本滤波器，&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20251215223922-now9eik.png&quot; alt=&quot;image&quot;&gt;&lt;/p&gt;
+&lt;p&gt;代码上就是在中值滤波上增加了去除最大值和最小值，均值中间几点数据出结果；但如果小一维窗口可以更简单些，不用排序。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-c&quot;&gt;// 这里简单静态滑动窗口案例
+// 中位值平均滤波，这里案例是常用窗口5点，去除最大最小点，无需排序。
+#include &amp;#x3C;stdbool.h&gt;
+
+#define MOVING_MEDIAN_AVG_BUF_SIZE 	(5) // 定义滑动窗口大小
+
+typedef struct {
+    int buf[MOVING_MEDIAN_AVG_BUF_SIZE];    // 环形缓冲区存储历史数据
+	int index;     						// 当前缓冲区位置
+	bool buf_full;						// 缓冲区满了
+} moving_median_avg_st;
+
+// 初始化滑动平均滤波器
+void moving_median_init(moving_median_avg_st *filter) 
+{
+    filter-&gt;index = 0;
+	filter-&gt;buf_full = false;
+	memset(filter-&gt;buf, 0, sizeof(filter-&gt;buf));
+}
+
+// 更新滤波器并计算当前平均值
+int moving_median_updata(moving_median_avg_st *filter, int input) 
+{
+	int result = 0;
+
+	// 添加新数据到缓冲区
+    filter-&gt;index = filter-&gt;index % MOVING_MEDIAN_AVG_BUF_SIZE;
+    filter-&gt;buf[filter-&gt;index] = input;
+    filter-&gt;index++;
+    
+
+	if (!filter-&gt;buf_full &amp;#x26;&amp;#x26; filter-&gt;index &gt;= MOVING_MEDIAN_AVG_BUF_SIZE)
+	{
+		filter-&gt;buf_full = true;
+	}
+
+    if (filter-&gt;buf_full) 
+	{
+        int max_vlue = filter-&gt;buf[0];
+        int min_value = max_vlue;
+        int sun = 0;
+
+        for (int i = 1; i &amp;#x3C; MOVING_MEDIAN_AVG_BUF_SIZE; i++)
+        {
+            int vlue = filter-&gt;buf[i];
+            if (vlue &gt; max_vlue)
+            {
+                max_vlue = vlue;
+            }
+            
+            if (vlue &amp;#x3C; min_value)
+            {
+                min_value = vlue;
+            }
+
+            sun += vlue;
+        }
+
+        result = sun / (MOVING_MEDIAN_AVG_BUF_SIZE - 2);
+    }
+	else
+	{
+		result = input;
+	}
+
+    return result;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;四、指数加权移动平均滤波&lt;/h2&gt;
+&lt;p&gt;指数加权移动平均滤波（EWMA），这一串名词蹦出来挺高大上的，其实没啥，先看其公式：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20251216100247-jdtagtg.png&quot; alt=&quot;image&quot;&gt;&lt;/p&gt;
+&lt;p&gt;t表示当前时间；v为经过滤波器的数据；θ为当前输入值；β为权重系数，是两个数据在结果中所占的百分比。&lt;/p&gt;
+&lt;p&gt;这里定上一时间的结果权重40%，所以根据公式为：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;滤波结果 t= 滤波结果t-1 * 0.3 + （1 - 0.3）* 输入数据t。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;当然每次的滤波结果都需要记录下来不断更新，并应用到下次计算当中。&lt;/p&gt;
+&lt;p&gt;滤波后的数据会受到历史数据的影响不会跳动太大，能够反映出接下来数据变化的趋势，但由于受到旧数据的影响，整体趋势会有一定的滞后。（嚼碎了啊喂，请动动小脑袋好好理解一下）&lt;/p&gt;
+&lt;p&gt;思路：对历史结果乘固定百分比β，最新数据乘（1-β）的百分比，两者相加后得到输出值，并且输出值更新值历史结果用于下次计算；&lt;em&gt;历史结果和最新数据所占的权重相加等于1&lt;/em&gt;。&lt;/p&gt;
+&lt;p&gt;它对数据平滑的效果无敌，但是过度平滑会导致数据失真，所以需要调整参数 β 来达到想要的效果。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20251216103945-0gfffg5.jpg&quot; alt=&quot;image&quot; title=&quot;图片来源：https://blog.csdn.net/qq_42363032&quot;&gt;
+图片来源：https://blog.csdn.net/qq_42363032&lt;/p&gt;
+&lt;p&gt;留下作业：下方代码这样就够了嘛，如果使用在温度检测上，真实数据突然变得很大会有什么问题？有什么办法可以缓解因为温度骤升或骤降而失真延迟太大的问题。。。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-c&quot;&gt;// 指数加权移动平均
+
+#define EWMA_SMOOTH_ALPHA_EDGE 1.0f      // 边缘当前质心权重占比
+#define EWMA_SMOOTH_ALPHA_SMOOTH 0.3f    //平滑后参数
+#define EWMA_TRANSITION_STEPS_COUNT  3   //收敛速度
+
+// 指数均值移动滤波对象
+typedef struct{
+    float prev_smoothed_value;      // 存储上个值
+    float alpha;                    // 权重
+}ewma_smoother_st;
+
+// 指数加权移动平均-------------------------------------------------------------
+void ema_smoother_init(ewma_smoother_st *ewma)
+{
+    ewma-&gt;prev_smoothed_value = 0.0f;
+    ewma-&gt;alpha = EWMA_SMOOTH_ALPHA_SMOOTH;
+}
+
+/**
+ * 指数加权移动更新
+*/
+float ema_smoother_update(ewma_smoother_st *ewma, float current_value) 
+{
+    // 动态调整平滑系数
+    if (ewma-&gt;alpha &gt; EWMA_SMOOTH_ALPHA_SMOOTH)
+    {   
+        ewma-&gt;alpha -= ((EWMA_SMOOTH_ALPHA_EDGE - EWMA_SMOOTH_ALPHA_SMOOTH)
+            * (1.0f / EWMA_TRANSITION_STEPS_COUNT));
+    }
+    else
+    {
+        ewma-&gt;alpha = EWMA_SMOOTH_ALPHA_SMOOTH;
+    }
+
+    ewma-&gt;prev_smoothed_value = ewma-&gt;alpha  * current_value + (1.0f - ewma-&gt;alpha ) * ewma-&gt;prev_smoothed_value;
+    return ewma-&gt;prev_smoothed_value;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;五、一维卡尔曼滤波器&lt;/h2&gt;
+&lt;p&gt;经典卡尔曼滤波，这里先简单解释一下一维卡尔曼，后续在做专题仔细介绍。&lt;/p&gt;
+&lt;p&gt;思路：它是通过之前数据的测量误差预测下一数据的值，然后用这个值去修正测量出的下一数据，得出结果，并记更新测量误差用于下次计算，本质是指数加权移动滤波(EWMA)加上更复杂的动态系统模型，进行更为系统化的动态权重计算。&lt;/p&gt;
+&lt;p&gt;一维卡尔曼指定了固定的Q(过程噪声)和R(测量噪声)，Q反应了模型预测的误差，越高则表示模型越不可靠，预测值权重占比越低，反之亦然；R表示传感器测量的误差，越高表示测量噪声越大，测量值权重占比越低，反正亦然。&lt;/p&gt;
+&lt;p&gt;卡曼计算滤波计算流程如下图：&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20251216145043-d8v9qn5.jpg&quot; alt=&quot;image&quot; title=&quot;图片来源：https://zhuanlan.zhihu.com/p/492776982&quot;&gt;
+图片来源：https://zhuanlan.zhihu.com/p/492776982&lt;/p&gt;
+&lt;p&gt;由于一维卡尔曼的F(状态转移矩阵)和H(观测矩阵)退化为标量1，因此只能滤波静态噪声，无法用于动态跟踪。&lt;/p&gt;
+&lt;pre&gt;&lt;code class=&quot;language-c&quot;&gt;//一维简单静态卡尔曼 
+
+typedef struct 
+{
+    float x;  // 状态估计——滤波结果
+    float p;  // 估计协方差
+
+    float q;  // 过程噪声——模型不确定性
+    float r;  // 测量噪声——传感器噪声
+}kalman_1d_st;
+
+// 卡尔曼滤波器
+void kalman1d_init(kalman_1d_st * kf, float init_x, float init_p, float init_q, float init_r)
+{
+    kf-&gt;x = init_x; 
+    kf-&gt;p = init_p; 
+
+    kf-&gt;q = init_q;
+    kf-&gt;r = init_r;
+}
+
+/**
+ * 卡尔曼滤波器更新
+*/
+float kalman1d_update(kalman_1d_st * kf, float x)
+{
+    // 预测
+    kf-&gt;p = kf-&gt;p + kf-&gt;q;
+    // 更新
+    float K = kf-&gt;p / (kf-&gt;p + kf-&gt;r);  // 增益
+    kf-&gt;x = kf-&gt;x + K * (x - kf-&gt;x);    // 状态更新
+    kf-&gt;p = (1.0f - K) * kf-&gt;p;            // 协方差更新
+
+    return kf-&gt;x;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h2&gt;结语&lt;/h2&gt;
+&lt;p&gt;以上是一些基础的平滑滤波算法，掌握其思想，在程序上才能保证采集数据的稳定。&lt;/p&gt;
+&lt;p&gt;本文非AI创作，如转载请注明出处。&lt;/p&gt;
+&lt;p&gt;‍&lt;/p&gt;</content:encoded><h:img src="/_astro/2512-McuSimpleFilter-banner.B2ah4KWp.jpg"/><enclosure url="/_astro/2512-McuSimpleFilter-banner.B2ah4KWp.jpg"/></item><item><title>TLS协议流程解析</title><link>https://poetrycld.com/blog/2025/2512-tlsprocessanalysismd</link><guid isPermaLink="true">https://poetrycld.com/blog/2025/2512-tlsprocessanalysismd</guid><description>细讲TLS协议建立通讯的每一步都做了啥。</description><pubDate>Sat, 06 Dec 2025 22:41:00 GMT</pubDate><content:encoded>&lt;p&gt;TLS全名为传输层安全协议（Transport Layer Security），它是SSL标准化升级版本，现在提到的SSL/TLS一般默认为TLS协议，协议过程中使用的证书是与SSL同类的数字证书（X.509数字证书）。&lt;/p&gt;
+&lt;h2&gt;SSL和TLS差别&lt;/h2&gt;
+&lt;p&gt;SSL由于握手过程相对简单，同时SSL的证书通常使用自签名证书或者已知的密钥，证书的管理也比较松散，加密算法依赖旧的加密算法。&lt;/p&gt;
+&lt;p&gt;随着计算机算力的增强，旧的加密算法已经能被计算机短时间内暴力破解，所以去除当前不安全的加密算法以及使用规范流程的升级算法TLS出现了，SSL1.0迭代到SSL3.0后就停止更新，切换为了TLS1.0。&lt;/p&gt;
+&lt;p&gt;强制使用更安全的算法，这里安全的重点是密码的长度😎，讲究是一大力出奇迹。&lt;/p&gt;
+&lt;p&gt;早期比如DES密钥长度56位，如果暴力破解最长要256次尝试，现代计算机分分钟就破解了；而现在比如AES-256密钥长度达256位，暴力破解要2256次尝试，截至25年还未有能直接破解。&lt;/p&gt;
+&lt;p&gt;对于证书的管理更为严格，所有证书必须要经过CA（证书的权威认证机构），在验证证书时直接CA机构认证更为透明。&lt;/p&gt;
+&lt;p&gt;到这里小伙伴发问了：“咋不直接命名SSL 4.0捏？”，当时SSL2.0、SSL3.0由于弱加密算法还有其它安全机制的缺陷，容易受到中间人攻击被使用的用户质疑其安全性，所以大刀阔斧的标准化了流程和增强了加密算法，并且避开了名声受损的SSL名，重开了TLS以表决心。&lt;/p&gt;
+&lt;h2&gt;为什么要使用TLS/SSL协议&lt;/h2&gt;
+&lt;p&gt;早期互联网上传输信息是直接明文发送信息，通过对方联网的IP地址发送到指定的电脑中，这样的风险是只要有个中间人冒名顶替了接收者的IP地址，或者更朴素的是监听了这人网线发出来的消息，那通话内容就被扒光了，甚至攻击人可以虚拟你的IP地址向其他人发送信息。&lt;/p&gt;
+&lt;p&gt;所以这套协议主要是在建立通讯之前使用安全的方式，相互验证身份以及沟通好加密密钥，进行加密通话，防止第三人冒名顶替或窃听通话内容。&lt;/p&gt;
+&lt;p&gt;之前web网页一般都是 &lt;code&gt;HTTP://.......&lt;/code&gt; 这样的网址，标志着它是最为原始的明文http协议，比如上网淘宝购物，付款时的账号密码都是明文在互联网中传输，有心人能轻而易举的捕获信息并获取账号密码，实在危险。&lt;/p&gt;
+&lt;p&gt;现在的互联网环境开始强制使用HTTPS协议，后面这个S指代最初的SSL传输协议，现在基本为TLS协议，为的就是在建立通讯的时候互相严明通讯双方的身份是否正常，然后商量加密的方式是什么后，开启加密通讯，这样即使有心人捕捉到了信息也无法解密通讯内容。&lt;/p&gt;
+&lt;p&gt;现在需要使用的场景有很多，比如：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;Web安全（HTTPS）&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;浏览器与网站服务器之间的数据传输（如登录、支付、个人信息提交）。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;电子邮件安全（SMTP/IMAP/POP3 over TLS）&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;邮件客户端与服务器之间的通信。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;即时通讯（IM）与API通信&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;微信、WhatsApp等聊天应用，或APP与服务器间的API调用。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;物联网（IoT）设备安全&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;智能设备（如摄像头、传感器）与云端服务器的通信。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;文件传输（FTP/SFTP）&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;通过FTP或SFTP协议上传/下载文件&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2&gt;一点点信息补充&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;HTTP 默认端口：80。	HTTPS 默认端口：443。&lt;/p&gt;
+&lt;p&gt;SSL 证书相当于驾驶证，是保存在源服务器的数据文件。需要向 CA 证书授权中心申请证书。&lt;/p&gt;
+&lt;p&gt;证书可以表明：（用户安装了 SSL 证书之后就可以通过 HTTPS 访问服务器）&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;域名属于谁&lt;/li&gt;
+&lt;li&gt;申请日期&lt;/li&gt;
+&lt;li&gt;其他信息&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;公钥&lt;/strong&gt;&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;私钥&lt;/strong&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;TLS 是 SSL 的后续版本，是一种对数据加密的框架。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20240226140637-1ot4qt6.png&quot; alt=&quot;image&quot;&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;私钥加密的文件只能用公钥解开，公钥加密的文件只能用私钥解开。&lt;/p&gt;
+&lt;p&gt;TLS1.2 中使用的两种加密形式：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;RSA（非对称加密算法）&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;服务器有自己固定是私钥和公钥。把公钥散播出去，要和服务端通信需要通过公钥加密随机数生成预主密钥发给服务端，在通过预主密钥计算生成会话密钥，以此进行本次的数据加密沟通。&lt;/li&gt;
+&lt;li&gt;缺点：一旦私钥被破解了，之前所有的数据通信都将被解密。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;DH（服务端有自己固定的公钥和私钥）&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;客户端请求连接的时候，服务端把自己固定公钥发送给客户端，客户端也生成一对公钥和私钥，在把自己的公钥发送给服务端。&lt;/li&gt;
+&lt;li&gt;它们连接的对称密钥是使用自己密钥和对方发送的公钥基于公开的算法算出一个密钥。双方算出的密钥都是一样的，所以可以作为后续通信加密使用对称加密密钥。&lt;/li&gt;
+&lt;li&gt;缺点：由于服务端的公钥是固定的，只有客户端的公钥是临时随机生成发，被破解的可能性也比较大（TLS1.3 废弃了，使用了 DHE 算法，双方每次通信的公钥和私钥都是随机生成的）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;TLS1.2 的 RSA 握手过程&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;在原先的 TCP3 次握手上进行改进。&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20240226131347-mf76u5w.png&quot; alt=&quot;image&quot;&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20240226134702-qwaxfmb.png&quot; alt=&quot;image&quot;&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;开始解析握手过程：&lt;/p&gt;
+&lt;p&gt;​&lt;code&gt;客户端&lt;/code&gt;​ ​1 和 &lt;code&gt;服务端&lt;/code&gt;​ ​2 步骤是用来对照双方使用的版本号和使用的密码套件以及压缩方式，并各自生成了一个随机数发送给对方，分别为&lt;strong&gt;随机数一&lt;/strong&gt;、&lt;strong&gt;随机数二&lt;/strong&gt;。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;以上相互声明完毕后，服务端先发送请求。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ol start=&quot;3&quot;&gt;
+&lt;li&gt;​&lt;code&gt;服务端&lt;/code&gt; ​服务器向客户端出示自己的证书，让客户端对照自己的证书信任列表类确认这个服务器是否可靠。&lt;/li&gt;
+&lt;li&gt;​&lt;code&gt;服务端&lt;/code&gt; ​ServerKeyExchange 这一步服务器把自己公钥发送给了客户端。&lt;/li&gt;
+&lt;li&gt;​&lt;code&gt;服务端&lt;/code&gt; ​如果服务端也要客户端的证书，会发送 CertificateRequest 请求包。比如登入网银就要这个步骤了，可省略。&lt;/li&gt;
+&lt;li&gt;​&lt;code&gt;服务端&lt;/code&gt; ​最后还要发送一个 ServerHelloDone 包表示结束&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;接下来客户端进行响应。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ol start=&quot;7&quot;&gt;
+&lt;li&gt;​&lt;code&gt;客户端&lt;/code&gt; ​Certificate 包，当服务端执行了连接的第五步，发送了 CertificateRequest 请求包，客户端就要在此时反馈自己的客户端 SSL 证书。&lt;/li&gt;
+&lt;li&gt;​&lt;code&gt;客户端&lt;/code&gt;​ ​ClientKeyExchange 包，生成一组随机数，在通过会服务器发送的公钥进行加密发送给服务器，称为预备主密码（服务端使用自己的私钥解密，得到预备主密码），这是&lt;strong&gt;第三个随机数&lt;/strong&gt;。&lt;/li&gt;
+&lt;li&gt;​&lt;code&gt;客户端&lt;/code&gt; ​发送数字签名，证明自己是证书的持有者。&lt;/li&gt;
+&lt;li&gt;​&lt;code&gt;客户端&lt;/code&gt; ​告诉服务器往后的数据就用商议好的算法和密钥来加密，准备切换加密通信。&lt;/li&gt;
+&lt;li&gt;​&lt;code&gt;客户端&lt;/code&gt; ​发送 EncryptedHandshakeMessage 包，表示客户端加密开始。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;服务端也开始回应。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ol start=&quot;12&quot;&gt;
+&lt;li&gt;​&lt;code&gt;服务端&lt;/code&gt; ​告诉客户端往后的数据就用商议好的算法和密钥来加密，准备切换加密通信。&lt;/li&gt;
+&lt;li&gt;​&lt;code&gt;服务端&lt;/code&gt; ​发送 EncryptedHandshakeMessage 包，表示服务端加密开始。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;blockquote&gt;
+&lt;p&gt;★ 到此，握手过程结束，从现在开始的数据都是&lt;strong&gt;通过加密&lt;/strong&gt;进行通信的。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;接下来用来加密数据的密钥为：&lt;code&gt;随机数一 + 随机数二 + 随机数3（预备主密钥）= 会话密钥&lt;/code&gt;&lt;/p&gt;
+&lt;p&gt;这里的预备主密钥只有客户端和服务端知道，而且每次建立通讯都会重新生成随机数计算出会话密钥，安全性会大大增强。后面都是用对称性加密进行通讯了。&lt;/p&gt;
+&lt;h2&gt;参考&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;a href=&quot;https://www.bilibili.com/video/BV1KY411x7Jp/?spm_id_from=333.788&amp;#x26;vd_source=58197a5b8611da761d73750a6086f2fd&quot;&gt;HTTPS 是什么？加密原理和证书。SSL/TLS 握手过程_哔哩哔哩_bilibili&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;https://zhuanlan.zhihu.com/p/133375078&quot;&gt;一篇文章让你彻底弄懂SSL/TLS协议&lt;/a&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;‍&lt;/p&gt;</content:encoded><h:img src="/_astro/2512-TlsProcessAnalysis-banner.CFT4PDjw.jpg"/><enclosure url="/_astro/2512-TlsProcessAnalysis-banner.CFT4PDjw.jpg"/></item><item><title>MQTT协议全面解析</title><link>https://poetrycld.com/blog/2025/2511-mqttprotocolanalysis</link><guid isPermaLink="true">https://poetrycld.com/blog/2025/2511-mqttprotocolanalysis</guid><description>撕开MQTT协议底裤，分析协议的每 bit 的意义。</description><pubDate>Thu, 27 Nov 2025 23:30:00 GMT</pubDate><content:encoded>&lt;p&gt;深度挖掘一下 MQTT。
+中文文档：&lt;a href=&quot;https://mcxiaoke.gitbooks.io/mqtt-cn/content/&quot;&gt;https://mcxiaoke.gitbooks.io/mqtt-cn/content/&lt;/a&gt;
+CSDN：&lt;a href=&quot;https://blog.csdn.net/qq_39785798/article/details/80765716&quot;&gt;https://blog.csdn.net/qq_39785798/article/details/80765716&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;消息队列遥测传输协议，是基于发布/订阅模式的“轻量级”通讯协议，该协议构建与 TCP/IP。
+优点：可以以极少的代码和有限的带宽，为连接远程设备提供实时可靠的消息。作为一种低开销、低带宽占用的即时通讯协议，主要在物联网、小型设备、移动设备上应用。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;根据中文文档协议说明，通过 AT 透传把相对应协议命令转化为 ASCII 码/16 进制在发送给服务端。
+请求数据包解析：&lt;a href=&quot;https://blog.csdn.net/qq_29933439/article/details/91350987&quot;&gt;https://blog.csdn.net/qq_29933439/article/details/91350987&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h2&gt;访问流程&lt;/h2&gt;
+&lt;p&gt;&lt;a href=&quot;https://blog.csdn.net/jiejiemcu/article/details/106737995&quot;&gt;https://blog.csdn.net/jiejiemcu/article/details/106737995&lt;/a&gt;&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;首先 TCP 连接到服务器端口。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/net-img-1691545397623-daa5357f-4a6f-4510-8f3b-c4709ec74900-20231029145727-qr3rlvh.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;以下发送的报文均为 16 进制 ASCII 码。&lt;/p&gt;
+&lt;h3&gt;MQTT 连接服务器&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;客户端&lt;/code&gt; CONNECT 连接请求。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;第一个报文必须是 CONNECT 报文，且只能一次，否则违规。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;服务端&lt;/code&gt; CONNACK 确认连接请求。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;服务端返回的应答码。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;中间是正常的数据交互。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;客户端&lt;/code&gt; PINGREQ 心跳请求。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;隔一段时间（1 分钟左右）要有心跳请求，否则断开。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;服务端&lt;/code&gt; PINGRESP 心跳响应。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/net-img-1691545659877-c6d8cec0-340e-43ad-a4b0-67bef59bfc02-20231029145727-buhxx9k.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;h3&gt;MQTT 订阅主题&lt;/h3&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;订阅者&lt;/code&gt; SUBSCRIBE 订阅主题。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;用于创建一个或多个订阅。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;支持通配符，指定了最大 QoS 等级，有固定、可变报头和有效载荷。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;这里的有效载荷包含了主题过滤列表，标识客户端想要订阅的主题，必须是 UTF-8 字符串。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;服务器&lt;/code&gt; SUBACK 订阅确认。&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;必须和等待确认的 SUBSCRIBE 有相同的报文标识符。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;code&gt;客户端``服务端&lt;/code&gt; PINGREQ 心跳请求和 PINGRESP 响应不能断。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/net-img-1691546436311-4c3a2cef-bafb-4d1a-94bd-9bd7e7fddcc9-20231029145727-slz4jga.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;h3&gt;MQTT 发布消息&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;服务质量等级 QoS
+&lt;img src=&quot;./assets/net-img-1691546778230-eed2d192-57d4-48ca-a2d5-756307bd0031-20231029145727-vcpofwo.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h4&gt;QoS0 的 PUBLISH 控制报文&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;发布消息服务器不会发送响应，发布者也不会重试，发出消息就丢弃了，所以消息可能根本没到达。
+&lt;strong&gt;发布者必须发送 QoS 等于 0，DUP 等于 0 的 PUBLISH 报文。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;PUBLISH	发布消息 &lt;code&gt;发布者&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/net-img-1691547146156-35889a66-05a4-4bb0-80de-feecb3d48a8e-20231029145727-60ar2kv.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;h4&gt;QoS1 的 PUBLISH 控制报文&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;确保消息至少送达一次，甚至可能被多次处理。QoS1 的 PUBLISH 报文的可变报头中包含一个报文标识符，需要 PUBACK 报文确认。
+收到确认报文后丢弃消息。
+&lt;strong&gt;发布者必须发送 QoS 等于 1，DUP 等于 0 的 PUBLISH 报文。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;PUBLISH	发布消息 &lt;code&gt;发布者&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;PUBACK	发布确认 &lt;code&gt;服务端&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/net-img-1691547822026-5c055992-f42e-452b-aa6d-3c89ff789f5c-20231029145727-9tvvm4i.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;h4&gt;QoS2 的 PUBLISH 控制报文&lt;/h4&gt;
+&lt;blockquote&gt;
+&lt;p&gt;这是最高等级的服务质量，消息丢失和重复都是不可接受的。使用这个服务质量等级会有额外的开销。
+&lt;strong&gt;发布者必须发送 QoS 等于 2，DUP 等于 0 的 PUBLISH 报文。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;PUBLISH		发布消息 &lt;code&gt;发布者&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;PUBREC		发布收到 &lt;code&gt;服务端&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;PUBREL 		发布释放 &lt;code&gt;发布者&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;PUBCOMP	发布完成 &lt;code&gt;服务端&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/net-img-1691547967451-104f0fb7-4d5e-4e8d-bb1e-2ba5c90cbd90-20231029145727-5sd863v.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;h3&gt;取消订阅&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;UNSUBSCRIBE 报文固定报头的第 3,2,1,0 位是保留位且必须分别设置为 0,0,1,0。否则服务器必须认为任何其它的值都是不合法的并关闭网络连。具体的描述可以看协议文档。
+UNSUBSCRIBE 报文的有效载荷包含客户端想要取消订阅的主题过滤器列表。UNSUBSCRIBE 报文中的主题过滤器必须是连续打包的 UTF-8 编码字符串。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;UNSUBSCRIBE		取消订阅主题 &lt;code&gt;订阅者&lt;/code&gt;&lt;/li&gt;
+&lt;li&gt;UNSUBACK		取消订阅确认 &lt;code&gt;服务器&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/net-img-1691548269363-a3489452-d419-4e2c-a4a9-54f82973ef3c-20231029145727-1dxkhae.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;h3&gt;断开连接&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;DISCONNECT 报文是客户端发给服务端的最后一个控制报文。表示客户端正常断开连接。
+DISCONNECT 报文的固定报头保留位必须全为 0。
+客户端发送 DISCONNECT 报文之后必须关闭网络连接，不能通过那个网络连接再发送任何控制报文。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;订阅者&lt;/code&gt; DISCONNECT		断开连接&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2&gt;报文案例&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;这里按照数据报文的规定，给了每个报文的例子。
+当然实际使用要转化为 ASCII 的十六进制码。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;CONNECT-连接服务端&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;10 + 剩余的长度 + 00 04(协议名长度) + 4d 51 54 54(MQTT) + 04(协议版本) + 连接标志 + 00 3c(心跳间隔) + 客户端 ID 长度 2 字节 + 客户端 ID + 用户名长度 2 字节 + 用户名 + 密码长度 2 字节 + 密码&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这里有效载荷顺序必须是：客户端标识符，遗嘱主题，遗嘱消息，用户名，密码。
+载荷的东西就根据连接标志里面 1 定义，比如上面的例子是在连接标志里面定义了用户名和密码。
+剩余长度字段使用一个变长度编码方案，对小于 128 的值它使用单字节编码。更大的值按下面的方式处理。低 7 位有效位用于编码数据，最高有效位用于指示是否有更多的字节。因此每个字节可以编码 128 个数值和一个_延续位（continuation bit）_。剩余长度字段最大 4 个字节。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;&lt;a href=&quot;https://blog.csdn.net/Mark_md/article/details/108196317&quot;&gt;https://blog.csdn.net/Mark_md/article/details/108196317&lt;/a&gt;
+这个计算是要有点门道。
+大概就是把数值转化为二进制，在进行拆分填入
+&lt;img src=&quot;./assets/net-img-1691656288102-3bad4ddc-b4ea-459a-98b7-2a50847adebd-20231029145727-hewkwk3.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/net-img-1691650760371-5e8df062-c4e0-46f6-8d2a-e1616e253be2-20231029145727-bwdif9c.png&quot; alt=&quot;image.png&quot;&gt;
+&lt;img src=&quot;./assets/net-img-1691655817329-4de30835-4609-4445-8ef0-71478e591d04-20231029145727-1paksoy.png&quot; alt=&quot;image.png&quot;&gt;&lt;/p&gt;
+&lt;h3&gt;PINGREQ-心跳请求&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;固定报文:    C0 00&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;这个要在 CONNECT 规定的保持连接 Keep Alive 的秒数之内发送心跳就行。&lt;/p&gt;
+&lt;h3&gt;DISCONNECT-断开连接&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;固定报文：E0 00&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;SUBSCRIBE_订阅主题&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;82(固定报头) + 剩余长度 + 可变报头 2 字节(相当于用户 ID，自定义) + Topic 长度两字节 + Topic + 服务等级(0-&gt;00，1-&gt;01)&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;剩余长度 = 可变 + 负载。&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;可变报头建议顺序增加从 0001 到 ffff。
+这个是关键，相当于订阅设备自己的 ID，不要重复。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;h3&gt;UNSUBSCRIBE_取消订阅&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;A2(固定报头) + 剩余长度 + 可变报头 2 字节(相当于用户 ID，自定义) + Topic 长度两字节 + Topic&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;和订阅主题就差别在：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;固定报头改了报文类型&lt;/li&gt;
+&lt;li&gt;结尾没有服务等级。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;PUBLISH_数据上报&lt;/h3&gt;
+&lt;blockquote&gt;
+&lt;p&gt;30(MQTT 报文类型 +DUP+QoS-H+QoS-+RETAIN) + 剩余长度 + 发布的 Topic 名字长度两字节 + 发布 Topic + 载荷数据
+上面的 30 中 QoS 等级为 0，等级为 1 是 32&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;blockquote&gt;
+&lt;p&gt;例子：用阿里云在线调试发布的消息，很随便
+30 9D 01 00 33 2F 73 79 73 2F 61 31 79 79 65 71 67 70 73 4B 6D 2F 6D 71 74 74 5F 66 78 2F 74 68 69 6E 67 2F 73 65 72 76 69 63 65 2F 70 72 6F 70 65 72 74 79 2F 73 65 74 7B 22 6D 65 74 68 6F 64 22 3A 22 74 68 69 6E 67 2E 73 65 72 76 69 63 65 2E 70 72 6F 70 65 72 74 79 2E 73 65 74 22 2C 22 69 64 22 3A 22 33 34 34 34 36 31 37 31 22 2C 22 70 61 72 61 6D 73 22 3A 7B 22 74 65 6D 70 22 3A 38 38 2C 22 68 75 6D 69 22 3A 37 37 7D 2C 22 76 65 72 73 69 6F 6E 22 3A 22 31 2E 30 2E 30 22 7D
+例子去掉前面的 30 9D 01 00 33 的数据为：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;/sys/a1yyeqgpsKm/mqtt_fx/thing/service/property/set{&quot;method&quot;:&quot;thing.service.property.set&quot;,&quot;id&quot;:&quot;34446171&quot;,&quot;params&quot;:{&quot;temp&quot;:88,&quot;humi&quot;:77},&quot;version&quot;:&quot;1.0.0&quot;}&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;以下是针对阿里云：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;要有请求方法	method + Topic&lt;/li&gt;
+&lt;li&gt;设备唯一标识	id + 自定义 ID&lt;/li&gt;
+&lt;li&gt;业务属性参数	属性 1 + 参数，属性 2……&lt;/li&gt;
+&lt;li&gt;协议版本号	version + 版本号&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;上面的 QoS 等级为 0，就是没有任何响应的。&lt;/p&gt;
+&lt;p&gt;如果要有响应，就把固定报头加上 QoS 等级 1，为 32，格式中还要在 Topic 后面加上报文标识符两个字节。&lt;/p&gt;
+&lt;h2&gt;阿里云&lt;/h2&gt;
+&lt;blockquote&gt;
+&lt;p&gt;CSDN 的连接教程：&lt;a href=&quot;https://blog.csdn.net/fang_dz999/article/details/112283742&quot;&gt;https://blog.csdn.net/fang_dz999/article/details/112283742&lt;/a&gt;
+阿里云的帮助手册：&lt;a href=&quot;https://help.aliyun.com/zh/iot/user-guide/device-properties-events-and-services?spm=a2c4g.11186623.0.0.598577e11gleH5&quot;&gt;https://help.aliyun.com/zh/iot/user-guide/device-properties-events-and-services?spm=a2c4g.11186623.0.0.598577e11gleH5&lt;/a&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;只支持 0 和 1 的服务等级。&lt;/p&gt;
+&lt;p&gt;a1yyeqgpsKm.iot-as-mqtt.cn-shanghai.aliyuncs.com :1883   主机地址&lt;/p&gt;
+&lt;h3&gt;参数（以阿里手册为主）&lt;/h3&gt;
+&lt;p&gt;首先设备三元组是这个：&lt;/p&gt;
+&lt;p&gt;{   &quot;ProductKey&quot;: &quot;a1yyeqgpsKm&quot;,   &quot;DeviceName&quot;: &quot;mqtt_fx&quot;,   &quot;DeviceSecret&quot;: &quot;3c2aadd7af6447d45fa661cf6adf309f&quot; }&lt;/p&gt;
+&lt;p&gt;&lt;img src=&quot;./assets/image-20231116094703-zs09gmb.png&quot; alt=&quot;image&quot;&gt;&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;客户端 ID&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;*|securemode=2,signmethod=hmacsha256|&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;*表示设备名称，注意替换&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;客户端 ID&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;产品名 + &amp;#x26; + 设备的 ProductKey&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;密码（明文格式可能会变，看看平台的说明）&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;设计到加密协议：HmacSHA1&lt;/li&gt;
+&lt;li&gt;找一下加密网站，用 DeviceSecret 作为密钥进行明文加密：clientld+ 设备名 +deviceName+ 设备名 +productKey+ 设备的密钥&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;地址      端口 1883&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;
+&lt;p&gt;*.iot-as-mqtt.cn-shanghai.aliyuncs.com&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;*表示自己账号的 ProductKey，注意替换。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h3&gt;自己编写一波&lt;/h3&gt;
+&lt;pre&gt;&lt;code class=&quot;language-markdown&quot;&gt;- 服务器：a1yyeqgpsKm.iot-as-mqtt.cn-shanghai.aliyuncs.com
+- username_用户名：mqtt_fx&amp;#x26;a1yyeqgpsKm
+
+下面这密码是加密过的
+- passwd：c86c95ef56cceaaa6a8334ef090d6d5c5fa07ca6eac25b0872806188adbad420
+- clientID_客户端ID：a1yyeqgpsKm.mqtt_fx|securemode=2,signmethod=hmacsha256,timestamp=1691648594041|
+- 发布和订阅： /a1yyeqgpsKm/${deviceName}/user/STM32F103C8T6
+
+- 属性上报：	thing.event.property.post
+- 属性设置：	thing.service.property.set
+- 设备发布topic：	/sys/a1yyeqgpsKm/mqtt_fx/thing/event/property/post
+- 测试发布的数据：{&quot;method&quot;:&quot;thing.event.property.post&quot;,&quot;id&quot;:&quot;23123123&quot;,&quot;params&quot;:{&quot;temp&quot;:63 ,&quot;humi&quot;:36},&quot;version&quot;:&quot;1.0.0&quot;}
+
+# CONNECT 连接客户端
+10 b2 01 00 04 4d 51 54 54 04 c2 00 3c 00 4f 61 31 79 79 65 71 67 70 73 4B 6D 2E 6D 71 74 74 5F 66 78 7C 73 65 63 75 72 65 6D 6F 64 65 3D 32 2C 73 69 67 6E 6D 65 74 68 6F 64 3D 68 6D 61 63 73 68 61 32 35 36 2C 74 69 6D 65 73 74 61 6D 70 3D 31 36 39 31 36 34 38 35 39 34 30 34 31 7C 00 13 6D 71 74 74 5F 66 78 26 61 31 79 79 65 71 67 70 73 4B 6D 00 40 63 38 36 63 39 35 65 66 35 36 63 63 65 61 61 61 36 61 38 33 33 34 65 66 30 39 30 64 36 64 35 63 35 66 61 30 37 63 61 36 65 61 63 32 35 62 30 38 37 32 38 30 36 31 38 38 61 64 62 61 64 34 32 30
+
+# CONNACK 确认连接请求
+20 02 00 00
+
+# PINGREQ 心跳请求
+C0 00
+&gt; 尾巴 00-&gt;连接接受  01-&gt;连接拒绝，不支持协议版本  02-&gt;连接拒绝，不合格的客户端标识符
+&gt; 03-&gt;连接拒绝，服务端不可用 04-&gt;连接拒绝,无效的用户名或密码 05-&gt;连接拒绝，未授权
+
+# PINGRESP 心跳响应
+D0 00
+
+# DISCONNECT 断开连接
+E0 00
+
+# SUBSCRIBE 订阅主题
+82 38 00 0A 00 33 2F 73 79 73 2F 61 31 79 79 65 71 67 70 73 4B 6D 2F 6D 71 74 74 5F 66 78 2F 74 68 69 6E 67 2F 73 65 72 76 69 63 65 2F 70 72 6F 70 65 72 74 79 2F 73 65 74 00
+
+# SUBACK 订阅确认
+90 03 00 0A 01
+&gt; 中间的 00 0A 是订阅主题的报文标识符，用来表示是回复给订阅主题的 00 0A 设备。
+&gt; 这里尾巴有的讲。 00-&gt;最大QoS 0.  01-&gt;成功，最大QoS1.  02-&gt;成功，最大QoS2. 80-&gt;失败。
+&gt; # 阿里云比较特殊确认回复的全是01。 #
+
+# UNSUBSCRIBE 取消订阅
+A2 37 00 0A 00 33 2F 73 79 73 2F 61 31 79 79 65 71 67 70 73 4B 6D 2F 6D 71 74 74 5F 66 78 2F 74 68 69 6E 67 2F 73 65 72 76 69 63 65 2F 70 72 6F 70 65 72 74 79 2F 73 65 74
+
+# UNSUBACK 取消订阅确认
+B0 02 00 0A
+&gt; 00 0A 是订阅主题的报文标识符，用来表示是取消订阅主题的 00 0A 设备。
+&gt; 02 剩余长度
+
+# PUBLISH 发布消息
+30 9D 01 00 33 2F 73 79 73 2F 61 31 79 79 65 71 67 70 73 4B 6D 2F 6D 71 74 74 5F 66 78 2F 74 68 69 6E 67 2F 73 65 72 76 69 63 65 2F 70 72 6F 70 65 72 74 79 2F 73 65 74 7B 22 6D 65 74 68 6F 64 22 3A 22 74 68 69 6E 67 2E 73 65 72 76 69 63 65 2E 70 72 6F 70 65 72 74 79 2E 73 65 74 22 2C 22 69 64 22 3A 22 33 34 34 34 36 31 37 31 22 2C 22 70 61 72 61 6D 73 22 3A 7B 22 74 65 6D 70 22 3A 38 38 2C 22 68 75 6D 69 22 3A 37 37 7D 2C 22 76 65 72 73 69 6F 6E 22 3A 22 31 2E 30 2E 30 22 7D 
+&gt; 这里发布的是QoS为0的消息，没有确认
+
+# PUBACK 发布确认
+40 02 7B 22 
+&gt; 40 固定报头，02 为接下来剩余长度固定为2，7b 22 发布消息的报文标识符（标识符必须是2个字节）
+&lt;/code&gt;&lt;/pre&gt;
+&lt;h3&gt;上传格式&lt;/h3&gt;
+&lt;p&gt;上传格式：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;id：String\每个设备的唯一 ID，自定义。&lt;/li&gt;
+&lt;li&gt;params：Object\请求业务的参数，里面是一些属性和数值。&lt;/li&gt;
+&lt;li&gt;version：String\协议版本号，目前协议版本号唯一值为 &lt;code&gt;1.0&lt;/code&gt;。&lt;/li&gt;
+&lt;li&gt;method：String\请求方法。
+&lt;ul&gt;
+&lt;li&gt;发布属性：thing.event.property.post&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;pre&gt;&lt;code class=&quot;language-json&quot;&gt;{&quot;id&quot;:自定义设备唯一ID, 
+	&quot;params&quot;:{
+		&quot;物模型属性名1&quot;:数据,
+		&quot;物模型属性名2&quot;:数据
+	},
+	&quot;version&quot;:&quot;1.0&quot;,
+	&quot;method&quot;:&quot;thing.event.property.post&quot;
+}
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;‍&lt;/p&gt;</content:encoded><h:img src="/_astro/2512-MqttProtocolAnalysis-banner.BU97JBLf.jpg"/><enclosure url="/_astro/2512-MqttProtocolAnalysis-banner.BU97JBLf.jpg"/></item></channel></rss>
