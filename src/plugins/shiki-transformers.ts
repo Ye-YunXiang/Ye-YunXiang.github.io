@@ -141,3 +141,37 @@ export const addCopyButton = (timeout?: number): ShikiTransformer => {
     }
   }
 }
+
+// Collapse long code blocks automatically
+export const addCollapsible = (maxLines = 24): ShikiTransformer => {
+  return {
+    name: 'shiki-transformer-add-collapsible',
+    pre(node) {
+      const lineCount = this.source.split('\n').length
+      if (lineCount <= maxLines) return
+
+      this.addClassToHast(node, 'code-collapsible')
+      this.addClassToHast(node, 'code-collapsed')
+
+      const button = h(
+        'button',
+        {
+          class:
+            'code-toggle text-muted-foreground px-2 py-1 box-content border rounded bg-primary-foreground text-sm',
+          type: 'button',
+          'aria-expanded': 'false',
+          onclick: `
+          const container = this.parentElement;
+          if (!container) return;
+          const collapsed = container.classList.toggle('code-collapsed');
+          this.setAttribute('aria-expanded', String(!collapsed));
+          this.textContent = collapsed ? '展开' : '收起';
+        `
+        },
+        '展开'
+      )
+
+      node.children.push(button)
+    }
+  }
+}
