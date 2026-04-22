@@ -91,7 +91,7 @@ a {
 .code-collapsible.code-collapsed > pre::after {
   content: '';
   position: absolute;
-  left: 0;
+  left: 2.75rem;
   right: 0;
   bottom: 0;
   height: 5rem;
@@ -116,6 +116,9 @@ a {
   left: 50%;
   bottom: 0.75rem;
   transform: translateX(-50%);
+  width: 98%;
+  max-width: 400px;
+  padding: 0.5rem 1rem;
   font-size: 0.8rem;
   line-height: 1.1;
   color: hsl(var(--muted-foreground) / 1);
@@ -129,6 +132,13 @@ a {
     background-color 0.2s ease,
     box-shadow 0.2s ease;
 }
+.code-collapsible .code-toggle::before {
+  content: '▼';
+  margin-right: 0.5rem;
+}
+.code-collapsible .code-toggle[aria-expanded='true']::before {
+  content: '▲';
+}
 .code-collapsible .code-toggle:hover {
   color: hsl(var(--primary) / 1);
   border-color: hsl(var(--primary) / 0.35);
@@ -139,8 +149,15 @@ a {
 }
 .code-collapsible:not(.code-collapsed) .code-toggle {
   position: static;
-  display: inline-flex;
-  margin-top: 0.6rem;
-  margin-left: auto;
+  display: block;
+  margin: 0.6rem auto 0;
   transform: none;
+  width: 98%;
+  max-width: 400px;
+  padding: 0.5rem 1rem;
+  text-align: center;
+}
+.code-collapsible:not(.code-collapsed) .code-toggle::before {
+  content: '▲';
+  margin-right: 0.5rem;
 }

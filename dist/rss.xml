@@ -80,7 +80,7 @@
 &lt;p&gt;所以在软件上还需要验证固件是否被拷贝到其他MCU使用，还有要对存入flash中的重要参数进行加密；也可使用一些混淆工具，给逆向工程的大哥们制造些许困难。&lt;/p&gt;
 &lt;p&gt;这里我们也不求能完全防御住被破解的风险，只求我们的防御能给破解者制造足够多的困难，就可抵挡住绝大部分的工程师了。&lt;/p&gt;
 &lt;p&gt;所以，在这里再次对各位同仁们建议，别让程序裸奔。。。&lt;/p&gt;
-&lt;p&gt;本文非 AI 创作，如转载请注明出处。&lt;/p&gt;</content:encoded><h:img src="undefined"/><enclosure url="undefined"/></item><item><title>单片机中5种常见简单滤波器</title><link>https://poetrycld.com/blog/2025/2512-mcusimplefilter</link><guid isPermaLink="true">https://poetrycld.com/blog/2025/2512-mcusimplefilter</guid><description>单片机简单滤波器思路解析，附带使用代码。</description><pubDate>Thu, 25 Dec 2025 22:37:00 GMT</pubDate><content:encoded>&lt;p&gt;MCU开发过程中采集各类数据，无论是简单的温度、电压、电流，甚至是摄像头传出来的图像数据，多少都会受到电路噪声、环境噪声的影响，导致被噪声影响的数据触发了功能操作。&lt;/p&gt;
+&lt;p&gt;本文非 AI 创作，如转载请注明出处。&lt;/p&gt;</content:encoded><h:img src="/_astro/260422-McuReverseEngineeringTest-banner.CCN9Te-f.jpg"/><enclosure url="/_astro/260422-McuReverseEngineeringTest-banner.CCN9Te-f.jpg"/></item><item><title>单片机中5种常见简单滤波器</title><link>https://poetrycld.com/blog/2025/2512-mcusimplefilter</link><guid isPermaLink="true">https://poetrycld.com/blog/2025/2512-mcusimplefilter</guid><description>单片机简单滤波器思路解析，附带使用代码。</description><pubDate>Thu, 25 Dec 2025 22:37:00 GMT</pubDate><content:encoded>&lt;p&gt;MCU开发过程中采集各类数据，无论是简单的温度、电压、电流，甚至是摄像头传出来的图像数据，多少都会受到电路噪声、环境噪声的影响，导致被噪声影响的数据触发了功能操作。&lt;/p&gt;
 &lt;p&gt;所以工程师们对于采集到的数据要有一定的敏感度，不能拿来就用。这时常见的滤波器就能对收集到的数据进行处理，过滤平滑收集的数据，防止被噪声影响。&lt;/p&gt;
 &lt;p&gt;前三者滤波器主打大力出奇迹，在连续的多点数据中得到想要的数据，使用均值或中位值的方式，抑制数据的波动，以达到平滑的效果；缺点也很明显，使用连续多点处理得出数据，会导致数据滞后，窗口越大，滞后性越强。&lt;/p&gt;
 &lt;p&gt;后两者则是数据迭代的思想，每次结果的都是依靠上次滤波器的结果和本次输入值，经过权重分配输出结果。&lt;/p&gt;

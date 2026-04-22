@@ -5,6 +5,7 @@ title: MCU固件逆向工程测试
 publishDate: 2026-04-22 12:00:00  
 description: '读取MCU固件进行反编译破解，警醒要关注固件安全。'  
 tags: [固件安全]  
+heroImage: { src: './260422-McuReverseEngineeringTest-banner.jpg', color: 'rgb(8, 46, 90)' }  
 # color: '#3a8047'
 language: '中文'
 
